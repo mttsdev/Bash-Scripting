@@ -1,0 +1,26 @@
+#!/bin/bash
+#Esta automação visa testar se um SIEM está parado.
+
+echo "Verificando se o SIEM está ativo..."
+ERRO="erros_servico.log"
+
+servico="splunkd"
+while true; do
+	if pgrep "$servico" > /dev/null && [ -f /var/log/syslog ]; then
+		echo "Tudo certo! O $servico está operando."
+	else
+		echo "ALERTA: O $servico parou de rodar! Última verificação em: $(date +%Y-%m-%d_%H:%M)" >> "$ERRO"
+		echo "Reiniciando o serviço..."
+		sudo systemctl start "$servico" && echo "[$servico] Reiniciado com sucesso em $(date)" >> "$ERRO"
+
+		if pgrep "$servico"> /dev/null; then
+			echo "Serviço reiniciado com sucesso em $(date +-Y-%m-%d_%H:%M:%S)!"
+		else
+			echo "FALHA CRÍTICA: O serviço $servico não subiu. Escalar para L3!" >> "$ERRO"
+			echo "Falha crítica. Verifique o arquivo $ERRO"
+		fi
+	fi
+
+	echo "Aguardando 10 segundos..."
+	sleep 10
+done
